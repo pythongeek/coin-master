@@ -26,7 +26,8 @@
       "@middleware/*": ["src/middleware/*"],
       "@utils/*": ["src/utils/*"],
       "@types/*": ["src/types/*"],
-      "@game/*": ["src/game/*"]
+      "@game/*": ["src/game/*"],
+      "@blockchain/*": ["src/blockchain/*"]
     }
   },
   "include": ["src/**/*", "tests/**/*", "scripts/**/*"],

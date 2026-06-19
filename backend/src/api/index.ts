@@ -5,6 +5,7 @@ import gameRouter from "./game";
 import squadRouter from "./squads";
 import rainRouter from "./rains";
 import leaderboardRouter from "./leaderboard";
+import walletRouter from "./wallets";
 
 const router = Router();
 
@@ -14,15 +15,7 @@ router.use("/game", gameRouter);
 router.use("/squads", squadRouter);
 router.use("/rains", rainRouter);
 router.use("/leaderboard", leaderboardRouter);
-
-// TODO: Phase 3 - Chat routes
-// router.use("/squads", squadRouter);
-
-// TODO: Phase 3 - Rain routes
-// router.use("/rains", rainRouter);
-
-// TODO: Phase 3 - Chat routes
-// router.use("/chat", chatRouter);
+router.use("/wallets", walletRouter);
 
 // TODO: Phase 5 - Admin routes
 // router.use("/admin", adminRouter);

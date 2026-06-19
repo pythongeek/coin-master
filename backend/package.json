@@ -36,6 +36,7 @@
     "pino-pretty": "^11.2.0",
     "prom-client": "^15.1.2",
     "socket.io": "^4.7.5",
+    "viem": "^2.17.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {

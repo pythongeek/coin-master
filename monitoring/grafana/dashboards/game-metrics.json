@@ -1,0 +1,107 @@
+{
+  "dashboard": {
+    "title": "CryptoFlip Game Metrics",
+    "tags": ["cryptoflip", "game", "production"],
+    "timezone": "browser",
+    "schemaVersion": 36,
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Active Bets Per Second",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(cryptoflip_bets_total[1m])",
+            "legendFormat": "{{currency}} - {{outcome}}"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 }
+      },
+      {
+        "id": 2,
+        "title": "Bet Volume (USD)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(cryptoflip_bet_amount_bucket[5m]))",
+            "legendFormat": "P95 {{currency}}"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 }
+      },
+      {
+        "id": 3,
+        "title": "Active WebSocket Connections",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "cryptoflip_active_connections",
+            "legendFormat": "Connections"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 }
+      },
+      {
+        "id": 4,
+        "title": "Fraud Events",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(cryptoflip_fraud_events_total[5m])",
+            "legendFormat": "{{rule}} - {{action}}"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 }
+      },
+      {
+        "id": 5,
+        "title": "Contract Balance (ETH)",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "cryptoflip_escrow_contract_balance",
+            "legendFormat": "{{chain}}"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 }
+      },
+      {
+        "id": 6,
+        "title": "HTTP Request Latency (P95)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(cryptoflip_http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "{{method}} {{route}}"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 }
+      },
+      {
+        "id": 7,
+        "title": "Chat Messages Per Second",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(cryptoflip_chat_messages_total[1m])",
+            "legendFormat": "{{room}}"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 }
+      },
+      {
+        "id": 8,
+        "title": "Rain Events",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(cryptoflip_rain_events_total[5m])",
+            "legendFormat": "Rain/min"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 }
+      }
+    ]
+  }
+}

@@ -142,8 +142,30 @@ services:
       - ./monitoring/alerting/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
     restart: unless-stopped
 
+  loki:
+    image: grafana/loki:latest
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./monitoring/loki/loki.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    restart: unless-stopped
+
+  promtail:
+    image: grafana/promtail:latest
+    volumes:
+      - ./monitoring/loki/promtail.yml:/etc/promtail/config.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/log:/var/log:ro
+    command: -config.file=/etc/promtail/config.yml
+    restart: unless-stopped
+    depends_on:
+      - loki
+
 volumes:
   postgres_data:
   redis_data:
   prometheus_data:
   grafana_data:
+  loki_data:

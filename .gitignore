@@ -1,79 +1,70 @@
-# CryptoFlip
-
+# Dependencies
 node_modules/
+.pnp
+.pnp.js
+
+# Production builds
 dist/
 build/
 .next/
 out/
-*.log
-*.pid
-*.seed
-*.pid.lock
 
-# Environment
+# Environment variables - NEVER COMMIT THESE
 .env
 .env.local
-.env.*.local
+.env.development
+.env.test
+.env.production
+.env.prod
+!.env.prod.template
 
-# Secrets
-secrets/
-*.pem
-*.key
-*.crt
-
-# Database
-postgres_data/
-redis_data/
-*.db
-*.sqlite
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
 
 # OS
 .DS_Store
 Thumbs.db
 
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
 # Testing
 coverage/
 .nyc_output/
 
-# Docker
-*.dockerignore
-docker-compose.override.yml
+# Database
+*.db
+*.sqlite
 
-# Temporary
-tmp/
-temp/
-*.tmp
-
-# Frontend
-frontend/.next/
-frontend/out/
-frontend/node_modules/
-
-# Backend
-backend/dist/
-backend/node_modules/
-backend/coverage/
-
-# Smart Contracts
-backend/contracts/cache/
-backend/contracts/artifacts/
-backend/contracts/typechain-types/
+# SSL Certificates (self-signed for local dev)
+nginx/ssl/*.crt
+nginx/ssl/*.key
+nginx/ssl/*.csr
+!nginx/ssl/.gitkeep
 
 # Terraform
-infrastructure/terraform/*.tfstate
-infrastructure/terraform/*.tfstate.*
-infrastructure/terraform/.terraform/
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/*.tfvars
+terraform/.terraform.lock.hcl
 
-# Logs
-logs/
-*.log
+# Docker
+docker-compose.override.yml
 
 # Misc
-*.tar.gz
-*.zip
+*.pid
+*.seed
+*.pid.lock
+.cache/
+temp/
+tmp/

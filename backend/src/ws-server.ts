@@ -45,6 +45,30 @@ io.on("connection", (socket) => {
     socket.emit("room_left", { room: data.room });
   });
 
+  // ─── Phase 3: Chat ───────────────────────────────────
+  socket.on("chat_message", (data: { room: string; content: string }) => {
+    // TODO: Validate auth, sanitize content, persist to DB
+    const sanitized = data.content.substring(0, 500).trim();
+    if (!sanitized) return;
+
+    const message = {
+      id: Math.random().toString(36).substring(2, 15),
+      roomId: data.room,
+      userId: "dev-user", // TODO: real user from auth
+      username: "Player", // TODO: real username
+      content: sanitized,
+      timestamp: new Date().toISOString(),
+    };
+
+    io.to(data.room).emit("chat_message", message);
+    logger.info({ msg: "Chat message", room: data.room, content: sanitized.substring(0, 50) });
+  });
+
+  socket.on("chat_delete", (data: { messageId: string; room: string }) => {
+    // TODO: Validate moderator/admin permissions
+    io.to(data.room).emit("chat_deleted", { id: data.messageId });
+  });
+
   socket.on("disconnect", (reason) => {
     logger.info({ msg: "WS client disconnected", socketId: socket.id, reason });
   });

@@ -1,0 +1,79 @@
+# CryptoFlip
+
+node_modules/
+dist/
+build/
+.next/
+out/
+*.log
+*.pid
+*.seed
+*.pid.lock
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Secrets
+secrets/
+*.pem
+*.key
+*.crt
+
+# Database
+postgres_data/
+redis_data/
+*.db
+*.sqlite
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage/
+.nyc_output/
+
+# Docker
+*.dockerignore
+docker-compose.override.yml
+
+# Temporary
+tmp/
+temp/
+*.tmp
+
+# Frontend
+frontend/.next/
+frontend/out/
+frontend/node_modules/
+
+# Backend
+backend/dist/
+backend/node_modules/
+backend/coverage/
+
+# Smart Contracts
+backend/contracts/cache/
+backend/contracts/artifacts/
+backend/contracts/typechain-types/
+
+# Terraform
+infrastructure/terraform/*.tfstate
+infrastructure/terraform/*.tfstate.*
+infrastructure/terraform/.terraform/
+
+# Logs
+logs/
+*.log
+
+# Misc
+*.tar.gz
+*.zip

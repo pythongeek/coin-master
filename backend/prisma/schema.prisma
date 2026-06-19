@@ -1,0 +1,450 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ENUMS ─────────────────────────────────────────────
+
+enum UserRole {
+  USER
+  MODERATOR
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+  PENDING_KYC
+}
+
+enum WalletType {
+  METAMASK
+  PHANTOM
+  WALLET_CONNECT
+  COINBASE
+}
+
+enum BetStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  COMPLETED
+  CANCELLED
+  DISPUTED
+}
+
+enum GameOutcome {
+  HEADS
+  TAILS
+}
+
+enum SquadStatus {
+  FORMING
+  READY
+  ACTIVE
+  DISSOLVED
+}
+
+enum RainStatus {
+  SCHEDULED
+  ACTIVE
+  CLAIMED
+  EXPIRED
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  BET_PLACED
+  BET_WON
+  BET_LOST
+  SQUAD_PAYOUT
+  RAIN_CLAIM
+  HOUSE_FEE
+  REFUND
+}
+
+enum TransactionStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+  REVERTED
+}
+
+// ─── CORE TABLES ────────────────────────────────────────
+
+model User {
+  id              String     @id @default(cuid())
+  email           String?    @unique
+  username        String     @unique
+  displayName     String?
+  avatarUrl       String?
+  role            UserRole   @default(USER)
+  status          UserStatus @default(ACTIVE)
+
+  // KYC / Compliance
+  kycStatus       String     @default("none")
+  kycSubmittedAt  DateTime?
+  kycVerifiedAt   DateTime?
+  countryCode     String?
+  ipAddress       String?
+
+  // Security
+  passwordHash    String?
+  twoFactorEnabled Boolean   @default(false)
+  twoFactorSecret String?
+
+  // Timestamps
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  lastLoginAt     DateTime?
+  lastActiveAt    DateTime?
+
+  // Relations
+  wallets         Wallet[]
+  bets            Bet[]
+  squadMembers    SquadMember[]
+  rainClaims      RainClaim[]
+  transactions    Transaction[]
+  sessions        Session[]
+  auditLogs       AuditLog[]
+  chatMessages    ChatMessage[]
+
+  @@index([status])
+  @@index([kycStatus])
+  @@index([createdAt])
+  @@index([lastActiveAt])
+  @@index([ipAddress])
+}
+
+model Wallet {
+  id              String      @id @default(cuid())
+  userId          String
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  walletType      WalletType
+  address         String
+  chainId         Int
+  isPrimary       Boolean     @default(false)
+  isVerified      Boolean     @default(false)
+
+  balance         Decimal     @default(0) @db.Decimal(36, 18)
+  balanceLocked   Decimal     @default(0) @db.Decimal(36, 18)
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  transactions    Transaction[]
+
+  @@unique([address, chainId])
+  @@index([userId])
+  @@index([address])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+}
+
+// ─── GAME ENGINE TABLES ─────────────────────────────────
+
+model ServerSeed {
+  id            String    @id @default(cuid())
+  seedHash      String    @unique
+  seedValue     String?
+  nonce         BigInt    @default(0)
+  isActive      Boolean   @default(true)
+  rotatedAt     DateTime?
+  createdAt     DateTime  @default(now())
+
+  bets          Bet[]
+
+  @@index([isActive])
+  @@index([seedHash])
+}
+
+model Bet {
+  id              String      @id @default(cuid())
+
+  userId          String
+  user            User        @relation(fields: [userId], references: [id])
+  walletId        String
+  wallet          Wallet      @relation(fields: [walletId], references: [id])
+
+  amount          Decimal     @db.Decimal(36, 18)
+  predictedOutcome GameOutcome
+  actualOutcome   GameOutcome?
+  multiplier      Decimal     @default(1.98) @db.Decimal(10, 4)
+
+  serverSeedId    String
+  serverSeed      ServerSeed  @relation(fields: [serverSeedId], references: [id])
+  clientSeed      String
+  nonce           BigInt
+  resultHash      String?
+
+  status          BetStatus   @default(PENDING)
+  settledAt       DateTime?
+
+  squadId         String?
+  squad           Squad?      @relation(fields: [squadId], references: [id])
+
+  payoutAmount    Decimal?    @db.Decimal(36, 18)
+  houseFee        Decimal?    @db.Decimal(36, 18)
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  transactions    Transaction[]
+
+  @@index([userId, createdAt])
+  @@index([status])
+  @@index([serverSeedId])
+  @@index([squadId])
+  @@index([createdAt])
+}
+
+// ─── SQUAD SYSTEM TABLES ──────────────────────────────────
+
+model Squad {
+  id              String      @id @default(cuid())
+  name            String
+  status          SquadStatus @default(FORMING)
+
+  targetAmount    Decimal     @db.Decimal(36, 18)
+  collectedAmount Decimal     @default(0) @db.Decimal(36, 18)
+  memberCount     Int         @default(0)
+  maxMembers      Int         @default(5)
+
+  predictedOutcome GameOutcome
+  multiplier      Decimal     @default(1.98) @db.Decimal(10, 4)
+
+  actualOutcome   GameOutcome?
+  totalPayout     Decimal?    @db.Decimal(36, 18)
+  houseFee        Decimal?    @db.Decimal(36, 18)
+
+  createdAt       DateTime    @default(now())
+  expiredAt       DateTime?
+  settledAt       DateTime?
+
+  members         SquadMember[]
+  bets            Bet[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model SquadMember {
+  id          String   @id @default(cuid())
+  squadId     String
+  squad       Squad    @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  contribution Decimal @db.Decimal(36, 18)
+  sharePercent Decimal @db.Decimal(10, 4)
+  payoutAmount Decimal? @db.Decimal(36, 18)
+
+  joinedAt    DateTime @default(now())
+
+  @@unique([squadId, userId])
+  @@index([squadId])
+  @@index([userId])
+}
+
+// ─── CRYPTO RAIN TABLES ──────────────────────────────────
+
+model RainEvent {
+  id              String      @id @default(cuid())
+
+  triggerType     String
+  triggerUserId   String?
+  streakCount     Int?
+
+  totalBudget     Decimal     @db.Decimal(36, 18)
+  perClaimAmount  Decimal     @db.Decimal(36, 18)
+  maxClaims       Int
+
+  status          RainStatus  @default(SCHEDULED)
+  startedAt       DateTime?
+  endedAt         DateTime?
+
+  totalClaimed    Int         @default(0)
+  totalDistributed Decimal    @default(0) @db.Decimal(36, 18)
+
+  createdAt       DateTime    @default(now())
+
+  claims          RainClaim[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model RainClaim {
+  id          String    @id @default(cuid())
+  rainId      String
+  rain        RainEvent @relation(fields: [rainId], references: [id])
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+
+  amount      Decimal   @db.Decimal(36, 18)
+  claimedAt   DateTime  @default(now())
+  ipAddress   String?
+
+  @@unique([rainId, userId])
+  @@index([rainId])
+  @@index([userId])
+}
+
+// ─── FINANCIAL TABLES ───────────────────────────────────
+
+model Transaction {
+  id              String            @id @default(cuid())
+  userId          String
+  user            User              @relation(fields: [userId], references: [id])
+  walletId        String
+  wallet          Wallet            @relation(fields: [walletId], references: [id])
+
+  type            TransactionType
+  status          TransactionStatus @default(PENDING)
+
+  amount          Decimal           @db.Decimal(36, 18)
+  fee             Decimal           @default(0) @db.Decimal(36, 18)
+
+  txHash          String?
+  blockNumber     BigInt?
+  confirmations   Int               @default(0)
+
+  betId           String?
+  bet             Bet?              @relation(fields: [betId], references: [id])
+
+  metadata        Json?
+
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([walletId])
+  @@index([type])
+  @@index([status])
+  @@index([txHash])
+  @@index([createdAt])
+}
+
+// ─── CHAT & SOCIAL TABLES ───────────────────────────────
+
+model ChatRoom {
+  id          String        @id @default(cuid())
+  name        String
+  type        String
+  maxUsers    Int           @default(500)
+  createdAt   DateTime      @default(now())
+
+  messages    ChatMessage[]
+
+  @@index([type])
+}
+
+model ChatMessage {
+  id        String    @id @default(cuid())
+  roomId    String
+  room      ChatRoom  @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  content   String    @db.VarChar(500)
+  isDeleted Boolean   @default(false)
+
+  createdAt DateTime  @default(now())
+
+  @@index([roomId, createdAt])
+  @@index([userId])
+}
+
+// ─── AUDIT & COMPLIANCE TABLES ──────────────────────────
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+
+  action      String
+  resource    String
+  resourceId  String?
+
+  oldValue    Json?
+  newValue    Json?
+
+  ipAddress   String?
+  userAgent   String?
+
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([resource, resourceId])
+  @@index([createdAt])
+}
+
+model HouseConfig {
+  id              String   @id @default(cuid())
+
+  houseEdgePercent Decimal  @default(2.0) @db.Decimal(5, 2)
+  maxBetAmount     Decimal  @default(10000) @db.Decimal(36, 18)
+  minBetAmount     Decimal  @default(0.0001) @db.Decimal(36, 18)
+  maxMultiplier    Decimal  @default(1.98) @db.Decimal(10, 4)
+
+  rainBudgetDaily  Decimal  @default(100) @db.Decimal(36, 18)
+  rainStreakTrigger Int   @default(5)
+  rainPerClaim     Decimal @default(0.001) @db.Decimal(36, 18)
+
+  squadMaxMembers  Int     @default(5)
+  squadMinMembers  Int     @default(2)
+  squadTimeoutMinutes Int  @default(5)
+
+  changedBy       String
+  changedAt       DateTime @default(now())
+
+  @@index([changedAt])
+}
+
+// ─── FRAUD / ANOMALY DETECTION TABLES ───────────────────
+
+model RiskEvent {
+  id          String   @id @default(cuid())
+  userId      String
+
+  riskType    String
+  severity    String
+  description String
+
+  evidence    Json
+
+  status      String   @default("open")
+  resolvedBy  String?
+  resolvedAt  DateTime?
+
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([riskType])
+  @@index([status])
+  @@index([createdAt])
+}

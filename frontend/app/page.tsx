@@ -12,9 +12,11 @@ export default function HomePage() {
           Instant payouts. Full transparency.
         </p>
         <div className="flex gap-4 justify-center pt-4">
-          <Button size="lg" className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold">
-            Play Now
-          </Button>
+          <a href="/game">
+            <Button size="lg" className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold">
+              Play Now
+            </Button>
+          </a>
           <Button size="lg" variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-800">
             How It Works
           </Button>
@@ -35,7 +37,7 @@ export default function HomePage() {
         </div>
       </div>
       <footer className="absolute bottom-4 text-slate-500 text-sm">
-        Phase 1 — Foundation • CryptoFlip v1.0.0
+        Phase 2 — Core Game Engine • CryptoFlip v1.1.0
       </footer>
     </main>
   );

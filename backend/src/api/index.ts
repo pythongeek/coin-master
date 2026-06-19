@@ -1,15 +1,13 @@
 import { Router } from "express";
 import healthRouter from "./health";
+import authRouter from "./auth";
+import gameRouter from "./game";
 
 const router = Router();
 
 router.use("/health", healthRouter);
-
-// TODO: Phase 2 - Auth routes
-// router.use("/auth", authRouter);
-
-// TODO: Phase 2 - Game routes
-// router.use("/game", gameRouter);
+router.use("/auth", authRouter);
+router.use("/game", gameRouter);
 
 // TODO: Phase 3 - Squad routes
 // router.use("/squads", squadRouter);

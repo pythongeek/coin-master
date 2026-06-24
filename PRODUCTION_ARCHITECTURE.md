@@ -938,12 +938,13 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 contract CryptoFlipEscrow is ReentrancyGuard, AccessControl, Pausable {
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
     bytes32 public constant HOUSE_KEEPER_ROLE = keccak256("HOUSE_KEEPER_ROLE");
-    
+
     // User deposits
     mapping(address => uint256) public balances;
     mapping(address => uint256) public lockedBalances;
     
     // House treasury
+    address public immutable houseTreasury;
     uint256 public houseBalance;
     uint256 public totalVolume;
     
@@ -960,7 +961,7 @@ contract CryptoFlipEscrow is ReentrancyGuard, AccessControl, Pausable {
         balances[msg.sender] += msg.value;
         emit Deposited(msg.sender, msg.value, balances[msg.sender]);
     }
-    
+
     // Operator locks bet amount
     function lockBet(address user, uint256 amount, bytes32 betId) 
         external 
@@ -972,7 +973,7 @@ contract CryptoFlipEscrow is ReentrancyGuard, AccessControl, Pausable {
         lockedBalances[user] += amount;
         emit BetLocked(user, amount, betId);
     }
-    
+
     // Operator settles bet (win or loss)
     function settleBet(
         address user, 
@@ -1008,15 +1009,23 @@ contract CryptoFlipEscrow is ReentrancyGuard, AccessControl, Pausable {
         emit Withdrawn(msg.sender, amount, balances[msg.sender]);
     }
     
+    constructor(address admin, address operator, address _houseTreasury) {
+        require(_houseTreasury != address(0), "Invalid treasury");
+        houseTreasury = _houseTreasury;
+        _grantRole(DEFAULT_ADMIN_ROLE, admin);
+        _grantRole(OPERATOR_ROLE, operator);
+        _grantRole(HOUSE_KEEPER_ROLE, admin);
+    }
+
     // House treasury withdrawal (multi-sig required)
-    function withdrawHouse(uint256 amount, address to) 
-        external 
-        onlyRole(HOUSE_KEEPER_ROLE) 
-        nonReentrant 
+    function withdrawHouse(uint256 amount)
+        external
+        onlyRole(HOUSE_KEEPER_ROLE)
+        nonReentrant
     {
         require(amount <= houseBalance, "Insufficient house balance");
         houseBalance -= amount;
-        (bool success, ) = payable(to).call{value: amount}("");
+        (bool success, ) = payable(houseTreasury).call{value: amount}("");
         require(success, "Transfer failed");
     }
     

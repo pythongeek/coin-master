@@ -21,6 +21,7 @@ const envSchema = z.object({
 
   RPC_URL_ETH: z.string().optional(),
   CONTRACT_ADDRESS_ETH: z.string().optional(),
+  PLATFORM_TREASURY_ADDRESS: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
   WALLET_CONNECT_PROJECT_ID: z.string().optional(),
 
   HOUSE_EDGE_DEFAULT: z.string().default("2.0"),

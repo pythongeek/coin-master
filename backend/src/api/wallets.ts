@@ -6,6 +6,7 @@ import { AppError } from "@middleware/errorHandler";
 import { apiRateLimit } from "@middleware/rateLimit";
 import { logger } from "@utils/logger";
 import { getOnChainBalance, getOnChainLockedBalance } from "@blockchain/contract";
+import { config } from "@config/index";
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -174,6 +175,8 @@ router.post("/:id/deposit", async (req, res, next) => {
       throw new AppError("Wallet not found", 404, "WALLET_NOT_FOUND");
     }
 
+    const treasuryAddress = config.PLATFORM_TREASURY_ADDRESS.toLowerCase();
+
     // Create deposit transaction record (pending until on-chain confirmation)
     const tx = await prisma.transaction.create({
       data: {
@@ -184,7 +187,9 @@ router.post("/:id/deposit", async (req, res, next) => {
         status: "PENDING",
         metadata: {
           chainId: wallet.chainId,
-          address: wallet.address,
+          address: treasuryAddress,
+          depositAddress: treasuryAddress,
+          sourceWalletAddress: wallet.address,
         },
       },
     });
@@ -197,10 +202,10 @@ router.post("/:id/deposit", async (req, res, next) => {
       data: {
         txId: tx.id,
         status: "PENDING",
-        depositAddress: wallet.address,
+        depositAddress: treasuryAddress,
         amount: parseResult.data.amount,
         chainId: wallet.chainId,
-        message: "Send ETH to your deposit address. We'll detect it automatically.",
+        message: "Send ETH to the platform treasury address. We'll detect it automatically.",
       },
     });
   } catch (error) {

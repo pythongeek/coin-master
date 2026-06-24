@@ -11,10 +11,11 @@ contract CryptoFlipEscrowTest is Test {
     address public operator = address(0x2);
     address public user = address(0x3);
     address public user2 = address(0x4);
+    address public houseTreasury = address(0xfe6AE2a8897F262017D1B2fff6224613df1B71E2);
 
     function setUp() public {
         vm.startPrank(admin);
-        escrow = new CryptoFlipEscrow(admin, operator);
+        escrow = new CryptoFlipEscrow(admin, operator, houseTreasury);
         vm.stopPrank();
 
         // Fund user with ETH
@@ -41,7 +42,7 @@ contract CryptoFlipEscrowTest is Test {
 
     function test_ReceiveFallback() public {
         vm.prank(user);
-        (bool success, ) = address(escrow).call{value: 5 ether}("");
+        (bool success,) = address(escrow).call{value: 5 ether}("");
         assertTrue(success);
         assertEq(escrow.balances(user), 5 ether);
     }
@@ -190,25 +191,26 @@ contract CryptoFlipEscrowTest is Test {
         escrow.settleBet(user, betId, false, 1 ether, 0.02 ether);
 
         uint256 houseBefore = escrow.houseBalance();
-        address treasury = address(0x5);
-
         vm.prank(admin);
-        escrow.withdrawHouse(houseBefore, treasury);
+        escrow.withdrawHouse(houseBefore);
 
         assertEq(escrow.houseBalance(), 0);
-        assertEq(treasury.balance, houseBefore);
+        assertEq(houseTreasury.balance, houseBefore);
     }
 
     function test_RevertWithdrawHouseNonKeeper() public {
         vm.prank(user);
         vm.expectRevert(
             abi.encodeWithSelector(
-                bytes4(keccak256("AccessControlUnauthorizedAccount(address,bytes32)")),
-                user,
-                escrow.HOUSE_KEEPER_ROLE()
+                bytes4(keccak256("AccessControlUnauthorizedAccount(address,bytes32)")), user, escrow.HOUSE_KEEPER_ROLE()
             )
         );
-        escrow.withdrawHouse(1 ether, address(0x5));
+        escrow.withdrawHouse(1 ether);
+    }
+
+    function test_RevertConstructorInvalidTreasury() public {
+        vm.expectRevert("CE: Invalid treasury");
+        new CryptoFlipEscrow(admin, operator, address(0));
     }
 
     // ─── PAUSE TESTS ──────────────────────────────────────
@@ -292,9 +294,7 @@ contract CryptoFlipEscrowTest is Test {
         vm.prank(user);
         vm.expectRevert(
             abi.encodeWithSelector(
-                bytes4(keccak256("AccessControlUnauthorizedAccount(address,bytes32)")),
-                user,
-                escrow.OPERATOR_ROLE()
+                bytes4(keccak256("AccessControlUnauthorizedAccount(address,bytes32)")), user, escrow.OPERATOR_ROLE()
             )
         );
         escrow.settleBet(user, keccak256("bet"), true, 1 ether, 0);

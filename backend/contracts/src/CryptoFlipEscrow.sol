@@ -21,6 +21,7 @@ contract CryptoFlipEscrow is ReentrancyGuard, AccessControl, Pausable {
     mapping(address => uint256) public lockedBalances;
 
     // House treasury
+    address public immutable houseTreasury;
     uint256 public houseBalance;
     uint256 public totalVolume;
 
@@ -34,13 +35,7 @@ contract CryptoFlipEscrow is ReentrancyGuard, AccessControl, Pausable {
     event Deposited(address indexed user, uint256 amount, uint256 newBalance);
     event Withdrawn(address indexed user, uint256 amount, uint256 newBalance);
     event BetLocked(address indexed user, uint256 amount, bytes32 indexed betId);
-    event BetSettled(
-        address indexed user,
-        bytes32 indexed betId,
-        bool won,
-        uint256 payout,
-        uint256 houseFee
-    );
+    event BetSettled(address indexed user, bytes32 indexed betId, bool won, uint256 payout, uint256 houseFee);
     event HouseFeeCollected(uint256 amount);
     event EmergencyPaused(address indexed by);
     event EmergencyUnpaused(address indexed by);
@@ -49,7 +44,11 @@ contract CryptoFlipEscrow is ReentrancyGuard, AccessControl, Pausable {
 
     // ─── CONSTRUCTOR ───────────────────────────────────────
 
-    constructor(address admin, address operator) {
+    constructor(address admin, address operator, address _houseTreasury) {
+        require(_houseTreasury != address(0), "CE: Invalid treasury");
+
+        houseTreasury = _houseTreasury;
+
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(OPERATOR_ROLE, operator);
         _grantRole(HOUSE_KEEPER_ROLE, admin);
@@ -85,15 +84,12 @@ contract CryptoFlipEscrow is ReentrancyGuard, AccessControl, Pausable {
             dailyWithdrawn[msg.sender] = 0;
             lastWithdrawalDay[msg.sender] = currentDay;
         }
-        require(
-            dailyWithdrawn[msg.sender] + amount <= maxDailyWithdrawalPerUser,
-            "CE: Exceeds daily limit"
-        );
+        require(dailyWithdrawn[msg.sender] + amount <= maxDailyWithdrawalPerUser, "CE: Exceeds daily limit");
 
         balances[msg.sender] -= amount;
         dailyWithdrawn[msg.sender] += amount;
 
-        (bool success, ) = payable(msg.sender).call{value: amount}("");
+        (bool success,) = payable(msg.sender).call{value: amount}("");
         require(success, "CE: Transfer failed");
 
         emit Withdrawn(msg.sender, amount, balances[msg.sender]);
@@ -107,11 +103,7 @@ contract CryptoFlipEscrow is ReentrancyGuard, AccessControl, Pausable {
      * @param amount The bet amount.
      * @param betId Unique bet identifier.
      */
-    function lockBet(
-        address user,
-        uint256 amount,
-        bytes32 betId
-    ) external onlyRole(OPERATOR_ROLE) nonReentrant {
+    function lockBet(address user, uint256 amount, bytes32 betId) external onlyRole(OPERATOR_ROLE) nonReentrant {
         require(balances[user] >= amount, "CE: Insufficient balance");
         require(lockedBalances[user] + amount <= balances[user], "CE: Lock exceeds balance");
 
@@ -129,13 +121,11 @@ contract CryptoFlipEscrow is ReentrancyGuard, AccessControl, Pausable {
      * @param payout The payout amount (including original bet if won).
      * @param houseFee The house fee deducted.
      */
-    function settleBet(
-        address user,
-        bytes32 betId,
-        bool won,
-        uint256 payout,
-        uint256 houseFee
-    ) external onlyRole(OPERATOR_ROLE) nonReentrant {
+    function settleBet(address user, bytes32 betId, bool won, uint256 payout, uint256 houseFee)
+        external
+        onlyRole(OPERATOR_ROLE)
+        nonReentrant
+    {
         require(lockedBalances[user] >= payout, "CE: Insufficient locked balance");
 
         lockedBalances[user] -= payout;
@@ -158,10 +148,7 @@ contract CryptoFlipEscrow is ReentrancyGuard, AccessControl, Pausable {
      * @param user The user address.
      * @param amount The amount to unlock.
      */
-    function unlockBet(
-        address user,
-        uint256 amount
-    ) external onlyRole(OPERATOR_ROLE) nonReentrant {
+    function unlockBet(address user, uint256 amount) external onlyRole(OPERATOR_ROLE) nonReentrant {
         require(lockedBalances[user] >= amount, "CE: Insufficient locked");
 
         lockedBalances[user] -= amount;
@@ -171,32 +158,24 @@ contract CryptoFlipEscrow is ReentrancyGuard, AccessControl, Pausable {
     // ─── HOUSE KEEPER FUNCTIONS ───────────────────────────
 
     /**
-     * @notice Withdraw from house treasury.
+     * @notice Withdraw platform income to the fixed house treasury.
      * @param amount The amount to withdraw.
-     * @param to The recipient address.
      */
-    function withdrawHouse(
-        uint256 amount,
-        address to
-    ) external onlyRole(HOUSE_KEEPER_ROLE) nonReentrant {
+    function withdrawHouse(uint256 amount) external onlyRole(HOUSE_KEEPER_ROLE) nonReentrant {
         require(amount <= houseBalance, "CE: Insufficient house balance");
-        require(to != address(0), "CE: Invalid recipient");
 
         houseBalance -= amount;
 
-        (bool success, ) = payable(to).call{value: amount}("");
+        (bool success,) = payable(houseTreasury).call{value: amount}("");
         require(success, "CE: Transfer failed");
 
-        emit HouseKeeperWithdrawal(to, amount);
+        emit HouseKeeperWithdrawal(houseTreasury, amount);
     }
 
     /**
      * @notice Update withdrawal safety limits.
      */
-    function updateLimits(
-        uint256 _maxPerTx,
-        uint256 _maxDailyPerUser
-    ) external onlyRole(HOUSE_KEEPER_ROLE) {
+    function updateLimits(uint256 _maxPerTx, uint256 _maxDailyPerUser) external onlyRole(HOUSE_KEEPER_ROLE) {
         maxWithdrawalPerTx = _maxPerTx;
         maxDailyWithdrawalPerUser = _maxDailyPerUser;
         emit LimitsUpdated(_maxPerTx, _maxDailyPerUser);

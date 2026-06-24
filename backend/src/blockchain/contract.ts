@@ -145,6 +145,15 @@ export function getConfiguredChains(): ChainConfig[] {
  */
 export const ESCROW_ABI = [
   {
+    inputs: [
+      { name: 'admin', type: 'address' },
+      { name: 'operator', type: 'address' },
+      { name: '_houseTreasury', type: 'address' },
+    ],
+    stateMutability: 'nonpayable',
+    type: 'constructor',
+  },
+  {
     inputs: [],
     name: 'deposit',
     outputs: [],
@@ -154,7 +163,6 @@ export const ESCROW_ABI = [
   {
     inputs: [
       { name: 'amount', type: 'uint256' },
-      { name: 'to', type: 'address' },
     ],
     name: 'withdraw',
     outputs: [],
@@ -165,6 +173,7 @@ export const ESCROW_ABI = [
     inputs: [
       { name: 'user', type: 'address' },
       { name: 'amount', type: 'uint256' },
+      { name: 'betId', type: 'bytes32' },
     ],
     name: 'lockBet',
     outputs: [],
@@ -174,8 +183,10 @@ export const ESCROW_ABI = [
   {
     inputs: [
       { name: 'user', type: 'address' },
-      { name: 'amount', type: 'uint256' },
+      { name: 'betId', type: 'bytes32' },
       { name: 'won', type: 'bool' },
+      { name: 'payout', type: 'uint256' },
+      { name: 'houseFee', type: 'uint256' },
     ],
     name: 'settleBet',
     outputs: [],
@@ -184,14 +195,49 @@ export const ESCROW_ABI = [
   },
   {
     inputs: [{ name: 'user', type: 'address' }],
-    name: 'getBalance',
+    name: 'getUserBalance',
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [{ name: 'user', type: 'address' }],
+    name: 'getUserLockedBalance',
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [{ name: 'user', type: 'address' }],
+    name: 'getUserAvailableBalance',
     outputs: [{ name: '', type: 'uint256' }],
     stateMutability: 'view',
     type: 'function',
   },
   {
     inputs: [],
-    name: 'getHouseBalance',
+    name: 'houseBalance',
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'houseTreasury',
+    outputs: [{ name: '', type: 'address' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [{ name: 'amount', type: 'uint256' }],
+    name: 'withdrawHouse',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'getContractBalance',
     outputs: [{ name: '', type: 'uint256' }],
     stateMutability: 'view',
     type: 'function',
@@ -208,9 +254,9 @@ export const ESCROW_ABI = [
     inputs: [
       { indexed: true, name: 'user', type: 'address' },
       { indexed: false, name: 'amount', type: 'uint256' },
-      { indexed: false, name: 'timestamp', type: 'uint256' },
+      { indexed: false, name: 'newBalance', type: 'uint256' },
     ],
-    name: 'Deposit',
+    name: 'Deposited',
     type: 'event',
   },
   {
@@ -218,9 +264,18 @@ export const ESCROW_ABI = [
     inputs: [
       { indexed: true, name: 'user', type: 'address' },
       { indexed: false, name: 'amount', type: 'uint256' },
-      { indexed: false, name: 'timestamp', type: 'uint256' },
+      { indexed: false, name: 'newBalance', type: 'uint256' },
     ],
-    name: 'Withdrawal',
+    name: 'Withdrawn',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: 'to', type: 'address' },
+      { indexed: false, name: 'amount', type: 'uint256' },
+    ],
+    name: 'HouseKeeperWithdrawal',
     type: 'event',
   },
 ] as const;

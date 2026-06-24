@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 
 /**
  * @title CryptoFlipEscrow
@@ -60,6 +60,10 @@ contract CryptoFlipEscrow is ReentrancyGuard, AccessControl, Pausable {
      * @notice Deposit ETH into the contract.
      */
     function deposit() external payable nonReentrant whenNotPaused {
+        _deposit();
+    }
+
+    function _deposit() internal {
         require(msg.value > 0, "CE: Zero deposit");
 
         balances[msg.sender] += msg.value;
@@ -132,11 +136,11 @@ contract CryptoFlipEscrow is ReentrancyGuard, AccessControl, Pausable {
 
         if (won) {
             balances[user] += payout;
+            houseBalance += houseFee;
         } else {
-            houseBalance += payout; // House keeps the loss
+            houseBalance += payout;
         }
 
-        houseBalance += houseFee;
         totalVolume += payout;
 
         emit BetSettled(user, betId, won, payout, houseFee);
@@ -210,7 +214,7 @@ contract CryptoFlipEscrow is ReentrancyGuard, AccessControl, Pausable {
     }
 
     function getUserAvailableBalance(address user) external view returns (uint256) {
-        return balances[user] - lockedBalances[user];
+        return balances[user];
     }
 
     function getContractBalance() external view returns (uint256) {
@@ -220,10 +224,10 @@ contract CryptoFlipEscrow is ReentrancyGuard, AccessControl, Pausable {
     // ─── RECEIVE / FALLBACK ─────────────────────────────────
 
     receive() external payable {
-        deposit();
+        _deposit();
     }
 
     fallback() external payable {
-        deposit();
+        _deposit();
     }
 }
